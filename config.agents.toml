@@ -1,0 +1,6 @@
+# ~/.codex/config.toml에 추가할 검수 역할 등록 (API 키 등 다른 설정은 이 저장소에 두지 않는다)
+[agents.ui_reviewer]
+config_file = "./agents/ui_reviewer.toml"
+
+[agents.code_reviewer]
+config_file = "./agents/code_reviewer.toml"
