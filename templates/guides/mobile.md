@@ -12,3 +12,21 @@
 - SimSlim이 설치되어 있으면 `simslim list`부터 시작해 작업 전 상태를 확인한다. 필요에 따라 `status`, `on`, `boot`를 사용하고 프로젝트 프로필이 있으면 검증한다. 종료 시 이번 작업에서 바꾼 설정만 원래 상태로 복원한다. 작업 전 꺼져 있었다면 `off`로 되돌린다.
 - 푸시, StoreKit, 유니버설 링크를 시험할 때는 필요한 시뮬레이터 서비스가 활성화됐는지 확인한다.
 - 허가 없이 시뮬레이터를 삭제하거나 초기화하지 않는다.
+
+## Standalone Android emulator
+
+Apply the Android tool rule in [AGENTS.md](../AGENTS.md). Reuse a suitable running emulator or start an existing AVD through installed SDK tools. Android Studio is not a prerequisite for this workflow.
+
+1. Locate the installed SDK and check its emulator/adb tools.
+2. List existing AVDs, select the intended one, and open its standalone window.
+3. Build, install, run, inspect logs, and capture through the project's CLI and adb as needed; select the intended device/serial explicitly.
+4. If tools or the required AVD are missing, report the prerequisite instead of opening Studio by default. Keep the central approval and device-data preservation boundaries.
+
+Example for the standard macOS SDK location and an existing default AVD:
+
+```sh
+"${USER_HOME}/Library/Android/sdk/emulator/emulator" -list-avds
+"${USER_HOME}/Library/Android/sdk/emulator/emulator" -avd Medium_Phone_API_35
+```
+
+For visible UI checks, use the emulator's own window rather than Studio's embedded/hidden-window options. Command reference: [Android Emulator CLI](https://developer.android.com/studio/run/emulator-commandline).
