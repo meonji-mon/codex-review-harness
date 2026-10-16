@@ -1,32 +1,37 @@
-# 모바일 개발·시뮬레이터
+# Mobile and simulator usage
 
-## 10. 모바일 개발·시뮬레이터
+Use for mobile development, debugging, UI checks, tests, or release verification. Boundaries: [section 3](../AGENTS.md#3-implementation-and-verification).
 
-적용 조건: 모바일 개발, 디버깅, UI 검수, 테스트 또는 배포 검증.
+## Device selection
 
-- iOS 기본은 **iPhone 17 Pro Simulator**, Android 기본은 `Medium_Phone_API_35`(1080×2400, 420dpi)로 한다. 프로젝트가 양쪽을 지원하면 공통 UI·상호작용의 변경 경로를 양쪽 모두 확인한다. 단일 플랫폼 프로젝트에 새 플랫폼을 추가하지 않는다.
-- Android에서 큰 화면·긴 번역·여유 있는 레이아웃은 `Pixel_9_Pro_API_35`로 보조 검수한다. 최신 API 호환성 검수에만 `DunkLoop_API_36`을 사용한다. `flutter_emulator` 계열은 기본 검수 대상이 아니다.
-- iPad 또는 태블릿 시뮬레이터는 사용자가 명시적으로 요청하거나 배포에 필요한 경우에만 실행한다.
-- 지정된 검수 조건을 충족하는 실행 중 시뮬레이터를 재사용하고, 불필요하게 여러 대를 동시에 실행하지 않는다. 지정 환경을 쓸 수 없으면 가능한 검증을 진행하고 누락된 기기·플랫폼을 보고한다. 대체 검증을 지정 환경 검증으로 표시하지 않는다.
-- 사용 가능하면 iOS 빌드와 시뮬레이터 조작에는 XcodeBuildMCP를 우선하고, 불가능하면 지원되는 로컬 대안을 사용한다.
-- SimSlim이 설치되어 있으면 `simslim list`부터 시작해 작업 전 상태를 확인한다. 필요에 따라 `status`, `on`, `boot`를 사용하고 프로젝트 프로필이 있으면 검증한다. 종료 시 이번 작업에서 바꾼 설정만 원래 상태로 복원한다. 작업 전 꺼져 있었다면 `off`로 되돌린다.
-- 푸시, StoreKit, 유니버설 링크를 시험할 때는 필요한 시뮬레이터 서비스가 활성화됐는지 확인한다.
-- 허가 없이 시뮬레이터를 삭제하거나 초기화하지 않는다.
+- iOS default: **iPhone 17 Pro Simulator**.
+- Android default: `Medium_Phone_API_35` (1080×2400, 420dpi).
+- Extra checks for large screens, long translations, or spacious layouts: `Pixel_9_Pro_API_35`.
+- Latest API compatibility: `DunkLoop_API_36`.
+- `flutter_emulator` profiles are not the default. Apply central iPad/tablet conditions.
+
+## Execution
+
+1. Reuse running simulators/project profiles that meet the designated conditions.
+2. Prefer available XcodeBuildMCP for iOS builds/operation; otherwise use a supported local alternative.
+3. If SimSlim is installed, establish initial state with `simslim list`. Use `status`, `on`, `boot`, and profile verification only as needed.
+4. Verify required services are active for push, StoreKit, and universal-link tests.
+5. Compare final to initial state; restore SimSlim with `off` if it was initially off.
 
 ## Standalone Android emulator
 
-Apply the Android tool rule in [AGENTS.md](../AGENTS.md). Reuse a suitable running emulator or start an existing AVD through installed SDK tools. Android Studio is not a prerequisite for this workflow.
+Apply the [central Android tool rule](../AGENTS.md#product-and-ui).
 
-1. Locate the installed SDK and check its emulator/adb tools.
-2. List existing AVDs, select the intended one, and open its standalone window.
-3. Build, install, run, inspect logs, and capture through the project's CLI and adb as needed; select the intended device/serial explicitly.
-4. If tools or the required AVD are missing, report the prerequisite instead of opening Studio by default. Keep the central approval and device-data preservation boundaries.
+1. Locate the installed SDK through its environment settings or known installation path. Check available emulator and adb tools.
+2. Reuse a suitable running device; otherwise list existing AVDs and start the selected one as a standalone window.
+3. Build, install, run, inspect logs, and capture through the project's CLI and adb as needed. Select the intended device/serial explicitly.
+4. If SDK tools or the required AVD are missing, report the prerequisite instead of opening Studio by default. Keep the central approval and device-data preservation boundaries.
 
-Example for the standard macOS SDK location and an existing default AVD:
+Example for the installed SDK and existing default AVD:
 
 ```sh
-"${USER_HOME}/Library/Android/sdk/emulator/emulator" -list-avds
-"${USER_HOME}/Library/Android/sdk/emulator/emulator" -avd Medium_Phone_API_35
+${USER_HOME}/Library/Android/sdk/emulator/emulator -list-avds
+${USER_HOME}/Library/Android/sdk/emulator/emulator -avd Medium_Phone_API_35
 ```
 
-For visible UI checks, use the emulator's own window rather than Studio's embedded/hidden-window options. Command reference: [Android Emulator CLI](https://developer.android.com/studio/run/emulator-commandline).
+For visible UI checks, use the emulator's own window rather than Studio's embedded/hidden-window launch options. Command reference: [Android Emulator CLI](https://developer.android.com/studio/run/emulator-commandline).

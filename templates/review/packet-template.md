@@ -1,52 +1,52 @@
-# 최소 검수 인계 패킷과 검사 원장
+# Review packet and check ledger
 
-메인이 실제 확인한 값으로 채운다. 문서용 데이터 계약이며 도구 API 스키마가 아니다. 짧은 작업은 기존 브리프와 실행 로그에 참조를 연결하면 되고 새 문서를 의무적으로 생성하지 않는다. 보안·범위·필수 증거를 줄이지 않는다.
+Use for actual review handoffs/check records. [AGENTS.md sections 3, 5, and 7](../AGENTS.md) govern evidence, security, and applicability; [Reviewer contract](reviewer-contract.md) governs verdicts. This is a data form to attach to existing briefs/logs, not a tool API schema.
 
 ```text
-review_id: 이번 변경의 실제 식별자
+review_id: actual change identifier
 role: ui_reviewer | code_reviewer
-mode: evidence-only (기본) | isolated-ui (UI만)
-review_scope: 고위험 의무 | 사용자 요청 필수 | 메인 선택 + 분류 이유
-requested_model / effort: 해당 역할의 사용자 지정 또는 지원되는 Astra/Sol + 기본 high
-observed_model / effort: 실행기가 제공한 실제 선택값 또는 미확인 (요청값을 관측값으로 복사하지 않음)
-사용자 결과 / Done when:
-보존 조건 / 접근 금지 대상:
-변경 파일 / 직접 관련 계약·호출 경로:
-snapshot: 커밋 + staged/unstaged diff + 관련 untracked 식별
-설정·환경·기기·언어·테마·계정/데이터·빌드와 증거의 대응:
-적용 지침: 실제 경로 (부모 추론·정답 유도·상대 첫 판정 제외)
-activation_ref: 실제 역할/하네스 로딩 + 생성 방식 + 입력 확인 기록
+mode: evidence-only (default) | isolated-ui (UI only)
+review_scope: high-risk mandatory | user-requested mandatory | optional + concrete reason
+requested_model / effort: actual request under central selection rules
+observed_model / effort: runtime observation or unknown; never copy requested values
+User outcome / Done when:
+Preservation conditions / prohibited access:
+Changed files / direct contracts and call paths:
+snapshot: commit + staged/unstaged diff + related untracked identifiers
+Settings/environment/device/language/theme/account-data/build correspondence:
+Instructions: review/reviewer-contract.md (review/1.4) + role method/read evidence
+activation_ref: actual role/loading + creation method + input evidence
+packet_ref / packet_sha256 / packet_read_lines:
+delivery_ref: spawn call_id + receipt + child ID/path + logged payload SHA256 match
 isolation_status: CONFIRMED | UNVERIFIED | UNSUPPORTED
-증거: 원본 경로/도구 참조 + 무엇을 증명하는지 + 어느 스냅샷인지
-checks_ref: 아래 검사 원장과 원본 실행 기록의 참조
-기록 수집 범위 / 공백 / 마스킹 / 접근 불가:
-알려진 실패·기존 실패·미수행 검사 (관찰과 해석 분리):
-허용된 읽기 도구 / UI 격리 조작 경로 / 공유 상태 소유자:
-반환: PASS | BLOCK | INCONCLUSIVE | NOT_APPLICABLE
+Evidence: original path/tool reference + what it proves + snapshot
+checks_ref: check ledger and original run references
+Collection coverage / gaps / redaction / inaccessible material:
+Known/existing failures and required but unrun checks; observation vs interpretation:
+Allowed reading tools / isolated UI path / shared-state owner:
+Return: PASS | BLOCK | INCONCLUSIVE | NOT_APPLICABLE
 ```
 
-## 검사 원장: 이번 작업의 전체 시도
+Payload matching is separate from plaintext meaning or absence of extra context.
 
-각 검사의 모든 시도를 기록하거나 기존 실행기/CI 기록에 연결한다. 최종 성공 결과만 고르지 않는다. 코드·동작에 필요한데 실행하지 못한 검사도 ‘필요하나 미수행’으로 구분해 이유를 남긴다. 아직 실행하지 않은 항목에 종료 코드·시각·로그를 지어내지 않는다.
+## Ledger: all attempts in this task
 
-| 필드 | 내용 |
+Connect checks and retries to original runner/CI records.
+
+| Field | Content |
 |---|---|
-| check_id / attempt_id | 같은 검사와 재시도를 구분하는 실제 식별자 |
-| command / cwd | 실행 명령·작업 경로. UI 수동 검사는 동작·경로를 쓰고 명령 미사용을 표시 |
-| status | 성공·실패·취소·타임아웃·실행 중·결과 불명·필요하나 미수행 |
-| exit_code | 실제 코드 또는 제공되지 않음. 성공했다고 추정해 0을 넣지 않음 |
-| snapshot / environment | 실행 당시 소스·설정·빌드·플랫폼 식별 |
-| log_ref / run_ref | 원본 stdout/stderr, UI 조작 기록, CI/실행기 이벤트 등 확인 가능한 참조 |
-| observed_time | 실제 실행 기록에 있는 시각만. 없으면 미확인 |
-| collector / coverage | CI·실행기·메인 작성 등 출처와 수집 범위 |
-| gap / redaction / reason | 로그 누락·잘림·보안 마스킹·미실행 이유 |
+| check_id / attempt_id | Actual identifiers separating a check from retries |
+| command / cwd | Command/path; manual UI checks use actions/paths and mark no command |
+| status | Success, failure, canceled, timeout, running, unknown result, or required-but-unrun |
+| exit_code | Actual code or unavailable; never infer zero from a success claim |
+| snapshot / environment | Source/settings/build/platform at execution |
+| log_ref / run_ref | Original stdout/stderr, UI operation, CI/runner events |
+| observed_time | Actual timestamp from records, otherwise unknown |
+| collector / coverage | CI, runner, or main source and collected scope |
+| gap / redaction / reason | Missing/truncated logs, security masking, or reason not run |
 
-실패 후 수정·재실행이 있으면 기존 항목을 덮지 않고 연결한다. 스냅샷이 다른 과거 실패가 현재도 남아 있다고 단정하지 않는다. 원본 로그 전체를 모델 입력에 복사할 필요는 없지만, 검수자는 필요한 구간을 독립적으로 열람할 수 있어야 한다.
+Use check/attempt IDs and original references, not reconstructed history. Central rules govern evidence validity.
 
-메인의 목록을 완전성 증명으로 삼지 않는다. 허용된 실행기·CI·작업 기록과 목록을 대조하고 새로 빠진 항목을 찾으면 추가한다. 해시는 확보된 파일의 동일성 확인일 뿐 미기록 실행의 부재를 증명하지 않는다. 도구가 전체 이력을 제공하지 않으면 관찰 가능한 범위만 명시하고 공백을 숨기지 않는다.
+## Role-specific material
 
-기록이 없는 기존 작업의 이력을 추정해 복원하거나 억지로 일괄 재실행하지 않는다. 이번 판정에 필수인 근거만 승인된 범위에서 보완한다. 민감한 내용은 원본을 파괴하지 않는 안전한 사본/필드 마스킹으로 보호하고, 마스킹 때문에 필수 근거가 사라졌으면 접근 제한으로 남긴다.
-
-## 역할별 추가 증거
-
-UI는 승인된 레퍼런스·수정 전후 화면·관련 상태와 조작 기록을 받는다. 코드는 diff·직접 관련 계약·테스트/빌드 기록을 받고, 명시적 성능 목표가 있으면 동일 조건의 기준/변경 측정을 받는다. 상대 검수자의 첫 결론 대신 같은 원본 스냅샷을 공유한다.
+UI receives approved references, real before/after screens, affected states, and interactions. Code receives diff, direct contracts, test/build records, and same-condition baseline/changed measurements for explicit performance goals. Share the same original snapshot rather than another reviewer's first conclusion.

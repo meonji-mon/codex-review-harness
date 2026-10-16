@@ -1,29 +1,24 @@
-# 이미지 자산
+# Image asset usage
 
-## 11. 이미지 자산
+Use for generation, edits, transparency, or model/quality comparison. Support, originals, verification, and comparison rules: [section 5](../AGENTS.md#5-tools-accounts-and-security).
 
-적용 조건: 이미지 생성·편집·투명 자산 제작 또는 이미지 모델·품질 설정 평가.
+## Models and supported values
 
-### 모델과 지원값
+- Only among supported user-nominated candidates: consider `gpt-image-2.5-flare` for routine generation and `gpt-image-2.5-sunburst` for precise edits, subject preservation, or quality-first work.
+- Verify current tool limits. Legacy GPT Image 2.5 reference: each side ≤3,840px and a multiple of 16; aspect ratio ≤3:1; total pixels 655,360–8,294,400. These are reference values, not support guarantees. Use verified limits and report final dimensions.
 
-- 생성 전에 사용 가능한 이미지 모델과 도구가 지원하는 `model`, `quality`, `size`, `background`, 출력 형식을 확인한다. 지원되지 않는 값을 지어내지 않는다.
-- 사용자 지정 후보 중 실제 지원되는 경우에 한해 일상 생성은 `gpt-image-2.5-flare`, 정밀 편집·주체 보존·높은 품질 우선 작업은 `gpt-image-2.5-sunburst`부터 검토한다.
-- 크기는 현재 모델·도구의 실제 제한을 확인한다. 기존 지침의 GPT Image 2.5 참고 규격은 각 변 3,840px 이하이자 16의 배수, 장단변 비율 3:1 이하, 전체 픽셀 655,360–8,294,400이다. 이는 지원 보증이 아니다. 실제 제한과 다르면 확인된 지원 범위를 사용하고 최종 크기를 보고한다.
+## Prompt and output
 
-### 생성과 출력 검증
+- Order prompts as outcome/use → subject → composition/layout → style/material/light → constraints. Keep them easy to read/edit.
+- Quote exact text; specify count, placement, and type direction. Exclude extra text, watermarks, and unrelated logos; check spelling/readability directly.
+- Transparency needs a supported tool option (for example `background="transparent"`) plus PNG/WebP, never JPEG. Specify fully transparent background with no checkerboard, solid fill, or shadow; the word “transparent” alone is insufficient.
+- Inspect alpha and genuinely transparent pixels, plus hair/glass/shadow/edge residue and color bleed. Painted checkerboards, RGB-only output, or fully opaque alpha fail transparency verification.
+- Regenerate or postprocess based on the failure. For tools without transparency, use a solid chroma key (green; magenta if the subject contains much green), convert to transparent PNG, and inspect edges.
 
-- 프롬프트는 결과·용도 → 주체 → 구도·배치 → 스타일·재질·조명 → 제약 순서로 쓴다. 특별한 문법보다 읽고 수정하기 쉬운 형식을 사용한다.
-- 정확한 문구는 따옴표로 감싸고 표시 횟수, 위치, 서체 방향을 지정한다. 추가 문구·워터마크·무관한 로고를 금지하고 결과의 철자와 가독성을 직접 확인한다.
-- 투명 자산은 도구가 지원하는 투명 배경 옵션(예: `background="transparent"`)과 PNG 또는 WebP를 함께 쓴다. JPEG는 쓰지 않는다. 프롬프트에는 “완전 투명 배경, 체커보드·단색·그림자 없음”을 넣는다. “투명/transparent” 문구만으로는 충분하다고 판단하지 않는다.
-- 결과 파일의 알파 채널과 실제 투명 픽셀을 확인한다. 머리카락·유리·그림자·가장자리의 잔여물·색 번짐도 검사한다. 체커보드가 픽셀로 그려져 있거나 RGB만 있거나 알파가 전부 불투명하면 투명 자산 검증 실패로 처리한다.
-- 투명 자산 검증에 실패하면 원인을 반영해 재생성하거나 후처리한다. 투명 미지원 도구는 단색 크로마키(기본 녹색, 피사체에 녹색이 많으면 마젠타) 후 투명 PNG로 변환하고 가장자리를 검사한다. 재시도는 공통 실패 처리 기준을 따른다.
+## Edits and preservation
 
-### 편집과 원본 보존
+Specify “change only X,” retained identity/shape/layout/light/labels, and reference numbers/roles. Change one thing at a time. For pixel-exact retained regions, composite the authorized edit onto the original rather than relying solely on a prompt.
 
-- 편집 전 실제로 읽을 수 있는 원본·참조 이미지를 확보한다. 이름이나 경로만으로 원본을 봤다고 가정하지 않는다. “X만 변경”과 유지할 정체성·형태·배치·조명·라벨을 명시하고, 참조 번호와 역할을 지정한다. 한 번에 한 가지를 바꾼 뒤 확인한다.
-- 픽셀이 그대로 유지되어야 하는 영역은 프롬프트 보존에만 맡기지 않고, 승인된 편집 영역을 원본에 합성한다.
+## Comparing settings
 
-### 모델·품질 설정을 변경하거나 비교하는 경우
-
-- 대표 프롬프트·참조 이미지로 기준 결과를 남기고 한 설정씩 바꾼다. 비교할 설정 외에는 프롬프트·참조·크기·품질을 동일하게 유지한다.
-- 품질·일관성·지연 시간·실패·재시도·허용 결과당 비용을 비교하고, 요구 품질을 충족한 뒤 지연 시간과 비용을 줄인다. 일상 생성마다 비교 실험을 하지 않는다.
+Keep representative prompts/references and a baseline output. Change one setting while retaining prompt, references, size, and other quality settings. Compare quality, consistency, latency, failures, retries, and cost per accepted result; meet required quality before reducing latency/cost.

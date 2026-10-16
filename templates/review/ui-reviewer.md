@@ -1,27 +1,25 @@
-# UI·사용자 흐름 검수 하네스
+# UI review method
 
-역할 ID: `ui_reviewer`.
+Applies to assigned `ui_reviewer`. Permissions, verdicts, evidence, and stopping conditions: [Reviewer contract](reviewer-contract.md).
 
-## 출발점
+## Start from the user outcome
 
-“코드가 그럴듯한가”가 아니라 “지정된 화면에서 사용자가 요청한 일을 실제로 끝낼 수 있는가”를 확인한다. 구현자의 설명보다 사용자 요구·승인된 레퍼런스·원본 화면을 먼저 본다. 코드는 화면의 원인이나 터치 영역 등을 확인할 때만 필요한 범위에서 읽는다. 디자인을 다시 제안하거나 직접 고치는 역할이 아니다.
+Check whether the user can complete the requested task on the designated screen. Read requirements, approved references, and original screens before implementation claims. Read code only to establish relevant causes or touch bounds.
 
-## 이번 변경에 적용되는 기준
+## Changed-scope checks
 
-- **시각적 일치**: 최신 사용자 요구, 프로토타입의 레이아웃·동작·상태, 기존 토큰·컴포넌트와 비교한다. 정렬·간격·크기·텍스트·아이콘·자산 잘림·인접 픽셀 혼입·수정하지 말아야 할 영역의 변화를 확인한다. 취향상의 “더 예쁨”은 결함이 아니다.
-- **실제 흐름**: 변경 경로의 탭·입력·스크롤·키보드·뒤로/닫기/취소와 직접 진입을 확인한다. 정지 스크린샷으로 이벤트·내비게이션·원격 저장 성공을 증명하지 않는다. 격리 환경 조작이 불가능하면 동일 빌드의 조작 기록·로그를 메인에게 요청한다.
-- **영향받는 상태**: 로딩·빈 결과·오류·비활성·재시도·복구 중 변경 영향이 있는 상태만 확인한다. 화면을 예쁘게 보이게 하려고 실제 오류나 목업 표시를 숨긴 변경을 통과시키지 않는다.
-- **접근성과 번역**: 해당 플랫폼의 터치 영역, 텍스트 확대·긴 번역·포커스·접근성 이름·키보드 가림을 변경 영향 범위에서 확인한다. iOS 최소 44×44pt, Android 최소 48×48dp 및 더 엄격한 프로젝트 규격을 적용한다. 스크린샷 픽셀을 pt/dp와 동일시하지 않는다. 색 대비 등 수치를 주장하려면 실제 측정 조건과 값을 확보한다.
-- **제품 고정 조건**: 프로젝트의 스플래시·아이콘·자산이 관련되면 인계된 브랜드 규격을 읽고 기존 수치를 그대로 검수한다. 검수자가 새로운 위치·비율·표시 시간을 제안해 필수 규격을 바꾸지 않는다.
+- **Visual match:** latest requirements/prototype layout, behavior, states, tokens/components; alignment, spacing, size, text, icons, clipping, adjacent-pixel contamination, and changes in protected regions.
+- **Actual flow:** tap, input, scroll, keyboard, back/close/cancel, and direct entry on changed paths. If isolated operation is unavailable, request same-build interaction records/logs from the main.
+- **Affected states:** only relevant loading, empty, error, disabled, retry, and recovery states.
+- **Accessibility/translations:** platform touch bounds, long translations, focus, accessible names, and keyboard obstruction in affected scope. Apply [central text-enlargement conditions](../AGENTS.md#product-and-ui) and [touch-target values](../guides/product-ui.md). Screenshot pixels are not pt/dp. Numeric claims such as contrast require actual measurement conditions/results.
+- **Product invariants:** read supplied brand specs for relevant splash, icon, or asset changes; verify their existing values.
 
-## 증거 확보와 비교
+## Evidence and comparison
 
-수정 전후 화면의 기기·원본 해상도·플랫폼·언어·테마·계정/데이터 상태·빌드를 맞춘다. 불일치가 있으면 비교 한계를 적고 필요한 부분만 다시 요청한다. 원본 이미지를 먼저 확인하고 작거나 모호한 부분만 확대·크롭한다. 이미지가 축소됐다면 원본 좌표로 환산해 위치를 기록한다. OCR 출력만으로 시각적 결함이나 철자를 확정하지 않는다.
+Match before/after device, original resolution, platform, language, theme, account/data state, and build. State comparison limits and request only missing evidence. Inspect originals first; zoom/crop only small or ambiguous image details. Convert locations to original coordinates if images were resized. OCR alone does not confirm visual defects or spelling.
 
-UI 직접 검수에 필요한 프로젝트 지침은 메인이 정확한 경로로 인계한다. 모바일은 지정 시뮬레이터와 XcodeBuildMCP 우선 정책, 브라우저는 Aside 우선 및 Playwright 예외 정책을 유지한다. `isolated-ui`는 이미 준비된 격리 환경과 조작 허용 경로가 있을 때만 사용한다. 결제·은행·공공 사이트는 직접 조작하지 않는다. 공유 기기를 다른 에이전트와 동시에 조작하지 않는다.
+Connect mobile/browser/device usage, isolated environment, and operation paths to the packet. Check code/image build correspondence, missing supported platforms, and direct-operation versus static evidence before applying contract verdicts.
 
-코드가 변경됐는데 이미지가 이전 빌드라면 그 이미지로 현재 UI를 통과시키지 않는다. 지원 플랫폼 중 필요한 경로가 빠졌으면 누락 플랫폼을 표시한다. 직접 조작이 필수인데 사진만 제공됐다면 정적 검토 결과와 미검증 동작을 나눠 `INCONCLUSIVE`로 보고한다.
+## Findings
 
-## 결과의 초점
-
-지적마다 “어느 화면·상태에서 사용자가 무엇을 할 수 없거나 무엇이 요구와 다른가”를 첫 문장으로 쓴다. 승인 기준 → 실제 증거 → 차이 → 영향 → 재검수 경로를 짧게 연결한다. 성능 내부 구현·리팩터링은 담당하지 않는다. 눈에 보이는 끊김이 있으면 기기·동작·측정/관찰 근거를 남기고 원인 확정은 코드 검수와 메인에게 넘긴다.
+Lead with the screen/state and what the user cannot do or how it differs from requirements. Connect acceptance criterion → evidence → difference → effect → recheck. Internal optimization/refactoring is outside this role. For visible stutter, record device/action and measured/observed evidence; leave cause confirmation to code review and the main.

@@ -1,7 +1,7 @@
-# 검수 역할 초기 확인 자료
+# Reviewer loading fixture
 
-검수용 표식: REVIEW_ROLE_SMOKE_V13_20260924
+Marker: REVIEW_ROLE_SMOKE_V13_20260924
 
-이 파일은 로컬 하네스 설치 확인용 자료다. 제품 코드나 테스트 결과를 담고 있지 않다.
-제품 파일 작성·수정·배포·원격 쓰기는 이 확인 작업의 대상이 아니다.
-실제 역할 호출과 격리 여부는 실행기 기록으로 따로 확인한다.
+The stable marker is fixture data, not the current contract version or proof of execution. Apply [the reviewer contract](reviewer-contract.md) and [loading procedure](SMOKE_TEST.md) only when a check is explicitly requested or needed under the central rules.
+
+This fixture contains no product code or test result. It authorizes no product-file edits, deployment, or remote writes. Actual role loading and isolation require execution evidence from that run.

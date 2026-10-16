@@ -1,62 +1,58 @@
-# 검수 활성화·절차적 독립성 확인
+# Reviewer activation evidence
 
-하네스 버전: `review/1.3`. 메인이 최초 설정·실행기 변경·권한 변경·새 검수 배정 때 필요한 범위만 읽는다. 이 문서는 도구 API가 아니라 확인 계약이다.
+Use for needed first-role, runtime/permission-change, or actual-assignment evidence. This document does not trigger calls: apply [section 7](../AGENTS.md#7-review-triggers-and-holds) and [model opt-in](../AGENTS.md#models-and-delegation) first. Independence, permissions, and verdicts: [review/1.4](reviewer-contract.md).
 
-## 서로 다른 상태를 분리한다
+## Collection
 
-`파일 생성 → 대상 경로 배치 → 로더 인식 → 역할 호출 → 절차적 독립성 확인 → 해당 변경 검수`를 구분한다. 파일이나 카탈로그 항목의 존재는 역할 호출·모델 사용 권한·검수 통과를 증명하지 않는다. 각 상태에는 실제 증거 참조를 붙이고, 미실행 항목은 미실행으로 남긴다.
+Use [read-only dispatch](dispatch.md#read-only-dispatch). `run_readonly_review.py` links original paths/line numbers. Check both `sandbox_policy` and `permission_profile.file_system`.
 
-## 독립성의 충분 조건
+Connect observations: files → recognized loader → role call → contract/method reads → input/context correspondence → result.
 
-아래 세 조건을 모두 확인하면 이 하네스에서 요구하는 **절차적 독립성**을 `CONFIRMED`로 기록한다. 이는 사고의 통계적 독립성이나 모든 내부 상태의 완전 격리를 증명한다는 뜻이 아니다. 플랫폼·보안·적용 프로젝트 지침은 공유해도 된다.
+| Ground | Actual evidence |
+|---|---|
+| Role | Runtime/version, role TOML, loading/selection, run ID, actual contract/method reading or delivery |
+| Context | Installed schema's creation method, actual call/session records, parent conversation/peer-verdict copying |
+| Input | Actual packet or safely observed input matched to requirements/snapshot/originals |
+| Model/permissions | Request versus observed model, effort, sandbox, and tool restrictions |
+| Check coverage | Original runner/CI records versus packet ledger; gaps/truncation/redaction |
 
-| 조건 | 확인할 실제 증거 | 충분하지 않은 근거 |
-|---|---|---|
-| 역할 적용 | 설치된 실행기 버전, 선택 역할의 실제 경로·하네스 버전 또는 해시, 그 역할의 로딩/선택을 보여 주는 설정·호출 기록, 반환된 실행 식별자 | TOML 파일이 있다는 사실, 역할 이름을 답변에 적은 것 |
-| 컨텍스트 전달 | 그 설치판의 문서·스키마·구현이 정의한 새 컨텍스트 생성 방식과 이를 실제 사용한 호출/세션 생성 기록. 부모의 작업 대화와 다른 검수자의 판정을 자동 복제하지 않았는지 확인 | 스레드 ID가 다름, 다른 모델 사용, 검수자의 ‘독립적이다’라는 자기 진술 |
-| 검수 입력 | 실제 전달 패킷 또는 안전하게 확인 가능한 입력 기록. 사용자 요구·보존 조건·동일 스냅샷·원본 증거는 포함하고 부모 추론 전문·정답 유도·상대 첫 판정은 제외 | 전달할 예정이던 템플릿만 존재, 실제 입력을 확인하지 않은 메인의 보장 |
+## Local Codex records
 
-지원 여부를 확인하지 않은 `fork_context` 같은 옵션을 임의로 추가하지 않는다. 특정 옵션의 기본값만 믿지 말고 해당 설치판의 의미와 실제 호출에 적용된 값을 연결한다. 사용 가능한 별도 신규 실행에서 동일 계약과 패킷을 주입하는 방식도 기록으로 위 조건을 충족하면 사용할 수 있으나, 기존 대화 재개를 새 컨텍스트로 표시하지 않는다.
+Read only needed fields in this run's parent/child JSONL under `~/.codex/sessions/<year>/<month>/<day>/`.
 
-## Codex 로컬 기록에서 확인하는 방법
+- `session_meta.agent_role`: assigned role.
+- Child developer input: actual contract/method loader and version marker.
+- Child tools/input: full `review/reviewer-contract.md` and role-method reading or safe direct-delivery proof; a reference alone is insufficient.
+- `turn_context.model`, `effort`, `sandbox_policy.type`: actual selections.
+- Parent `spawn_agent` with `fork_turns: "none"` plus child input: creation/delivery evidence.
+- For opaque input, compare parent sent bytes and child `encrypted_content` SHA256; link the same call's receipt, role/parent IDs, and recipient path. Never decrypt input or put raw opaque content/keys in reports.
 
-Codex CLI에서는 메인이 검수 호출 후 `~/.codex/sessions/<연>/<월>/<일>/`의 rollout JSONL을 읽기 전용으로 확인한다. 검수자는 자기 실행 기록을 볼 수 없으므로 이 확인은 메인이 한다.
+If these fields are unavailable, record the available observation method; apply contract interpretation/resume rules.
 
-- 역할 적용: 자식 rollout의 `session_meta.agent_role`이 배정한 역할과 같고, 자식 기록의 developer 지침에 공통 계약과 해당 역할 하네스(버전 표식 포함)가 들어 있다.
-- 모델·권한: 자식 `turn_context`의 `model`·`effort`가 배정값과 같고 `sandbox_policy.type`이 `read-only`다.
-- 컨텍스트 전달: 부모 rollout의 `spawn_agent` 호출이 `fork_turns: "none"`이고, 자식 기록에 부모의 사용자 요청·대화가 복제되지 않았다.
-- 검수 입력: 전달 메시지는 기록에 암호화될 수 있으므로, 메인은 보낸 패킷의 요지(요구·스냅샷·증거 참조, 제외 항목)를 자기 보고에 남긴다.
+## Delivery without decryption
 
-위 항목이 모두 확인되면 `CONFIRMED`로 기록하고 rollout 파일 경로와 자식 세션 ID를 근거로 붙인다. 파일이 없거나 필드가 다르면 `UNVERIFIED`다. 기록을 읽을 때 비밀값·무관한 대화를 출력하지 않는다.
+Collect two independent evidence links:
 
-## 확인 범위와 종료
+1. **Transport:** spawn call ID → same-call task-path receipt → actual child parent/role/path → NEW_TASK sender/recipient and matching logged-payload SHA256. Missing values, wrong recipient, multiple initial deliveries, or differing hashes are unverified.
+2. **Packet reading:** fixed approved path/SHA256 → child's actual read call ID/full output → unchanged file after execution. Quotes, self-reports, and truncated reads do not count.
 
-`isolation_status`는 `CONFIRMED`, `UNVERIFIED`, `UNSUPPORTED` 중 하나로 기록한다. 이 값은 검수 판정 `PASS/BLOCK/INCONCLUSIVE/NOT_APPLICABLE`과 별개다.
+These prove matching logged delivery and a full read of the named file, not opaque plaintext meaning, absence of extra context, or statistical independence. The `encrypted_content` field may carry readable routed content; its name alone does not prove encryption. `delivery_evidence` is not automatic full-independence or mandatory-review clearance.
 
-- 세 조건과 그 근거가 있으면 `CONFIRMED`다. 실행기·설정·하네스 버전이 같으면 확인된 기능 근거를 재사용하되, 각 호출의 역할·입력·스냅샷 대응은 확인한다.
-- 증거를 볼 수 없거나 자동 상속 범위를 확인할 수 없으면 `UNVERIFIED`다. 설치판이 요구 방식을 지원하지 않는 것이 확인되면 `UNSUPPORTED`다.
-- 알려진 문서·스키마·생성 기록을 확인해도 수단이 없으면 그 상태로 이번 확인을 종료한다. 같은 환경을 바꾸지 않고 무한 재호출하거나 다른 이름으로 반복하지 않는다. 새 근거·환경 변경이 있을 때만 재개한다.
-- 미확인/미지원이어도 가능한 로컬 구현·자체 검증과 참고 검토는 보고한다. 확인된 결함이 있으면 `BLOCK`, 없고 필수 독립성이 부족하면 `INCONCLUSIVE`로 두며 고위험 의무 검수·사용자 요청 필수 검수의 통과와 해당 변경의 병합·배포는 보류한다. 메인 선택 검수의 활성화 불가만으로 새 의무 관문을 만들지 않으며 확인된 결함과 원래 필수 증거 누락은 별도로 처리한다. 결과 없는 대기는 종료 경로가 아니다.
-- 사람의 독립 검수로 대체할 때도 실제 검수와 증거가 있어야 한다. 메인의 재독을 독립 검수로 바꾸지 않는다. 정책 예외는 사용자·플랫폼의 유효한 권한 범위에서만 별도로 판단하고 자동 적용하지 않는다.
-
-## 권한 확인은 독립성 확인과 별개다
-
-TOML의 `read-only`는 기본값이며 실제 부모 오버라이드·도구별 권한을 확인한다. 파일 시스템 제한을 MCP·브라우저·원격 쓰기 차단으로 확대 해석하지 않는다. 실제 확인 전에는 `technical_write_block=UNVERIFIED`로 남긴다. 이것만으로 코드를 쓸 권한이 생기지는 않는다. 검수자는 승인된 증거 읽기에 머문다.
-
-읽기 권한과 코드 수정 금지는 유지한다. 기술적 쓰기 차단의 시험이 필요하면 명시적으로 승인된 폐기 가능한 테스트 공간에서만 별도 수행하고 실제 프로젝트·계정·원격 데이터에 쓰기 시험을 하지 않는다. 검수자가 자기 권한을 바꾸거나 설치 작업을 수행하지 않는다.
-
-## 최소 실행 기록
+## Minimal record
 
 ```text
-runtime: 제품/버전/실행 모드 (확인된 값만)
+runtime: product/version/execution mode
 role: ui_reviewer | code_reviewer
-harness: review/1.3 + 실제 경로/해시
-run_id / spawn_record: 실제 식별자와 원본 기록 참조
-context_evidence: 설치판 계약 + 실제 생성 방식의 증거
-packet_ref / snapshot: 실제 입력 기록과 검수 대상
+contract_ref: review/reviewer-contract.md (review/1.4) + actual read/delivery
+role_ref: method path/hash + actual read/delivery
+harness: review/1.4
+run_id / spawn_record:
+context_evidence:
+packet_ref / packet_sha256 / full-read output lines / snapshot:
+delivery_ref: spawn call_id / receipt line / child_id-path / recipient line / opaque_payload_sha256
 isolation_status: CONFIRMED | UNVERIFIED | UNSUPPORTED
-technical_write_block: VERIFIED | UNVERIFIED (검사 범위를 함께 표시)
-limitations / next_action: 필요한 증거 또는 종료 이유
+technical_write_block: VERIFIED | UNVERIFIED + observed scope
+limitations / next_action:
 ```
 
-비밀값·부모의 비공개 추론·관련 없는 전체 대화는 기록 검증을 이유로 수집하거나 공개하지 않는다. 정확한 값이나 로그 필드가 제공되지 않으면 존재하는 것처럼 만들지 않는다.
+Collect changed-runtime/settings/permissions/packet/snapshot evidence only when central conditions require revalidation.

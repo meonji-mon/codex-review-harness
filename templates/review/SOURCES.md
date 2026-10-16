@@ -1,5 +1,7 @@
 # 근거·적용 범위·미확인 자료
 
+> Historical design references only. Current duties are in [AGENTS.md](../AGENTS.md) and [review/1.4](reviewer-contract.md). Dated observations below do not establish current runtime support or a new execution result.
+
 확인일: 2026-09-24. API·런타임 동작은 적용 시 설치 버전과 유효 설정을 다시 확인한다. 아래 문서는 설계 참고 자료이며 실행 지침에 매번 모두 읽도록 추가하지 않는다.
 
 ## 공식 OpenAI 자료

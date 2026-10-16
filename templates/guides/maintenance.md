@@ -1,19 +1,23 @@
-# 유지보수·작업 기록
+# Maintenance and work-record usage
 
-## 16. 유지보수와 작업 기록
+Use for Git storage, temporary images, and major/accumulated work records. Approval/recording: [section 2](../AGENTS.md#2-execution-and-approval); cleanup/preservation: [section 6](../AGENTS.md#6-worktree-preservation); reporting: [section 8](../AGENTS.md#8-reporting-and-instruction-maintenance).
 
-### Git 저장 공간 문제가 있는 경우
+## Git storage
 
-- 먼저 `git count-objects -vH`를 확인하고 일반적인 가비지 수집을 우선한다.
-- Git 내부 파일을 직접 삭제하지 않는다. 잠금 파일은 고아 상태인지 확인한 뒤에만 제거한다.
+Measure with `git count-objects -vH` before considering ordinary garbage collection. Verify orphan locks from running processes/recent logs before handling them.
 
-### 임시 이미지 정리 작업을 수행하는 경우
+## Images and records
 
-- 3일 동안 사용·수정되지 않은 임시 이미지는 정리 후보로만 본다.
-- 삭제 전 Git 추적 여부·참조·앱 자산 사용·Notion 사용·진행 중인 비교를 확인한다. 확인할 수 없으면 보류하고 나이만으로 추적 파일이나 실제 자산을 지우지 않는다.
+Check tracking, references, app assets, Notion use, and active comparisons before planning with the separately installed cleanup skill at `${CODEX_HOME_DIR}/skills/ai-cleanup/SKILL.md`.
 
-### 주요 작업을 완료하거나 의미 있는 작업이 약 6시간 누적된 경우
+For work records, verify connection, write permission, destination, and the existing record for the same task. Connect changes, checks, screen tags/captures, version/build, and deployment state to originals under central approval.
 
-- Notion 연결·쓰기 권한·대상 위치가 확인된 작업 기록은 상시 승인한다. 해당 완료 작업 또는 기록으로 확인된 약 6시간 누적 작업을 남긴다. 경과 시간을 추정하지 않는다.
-- 기록에는 변경 내용, 화면 태그, 스크린샷, 검증, 버전/빌드, 배포 상태를 포함한다.
-- 같은 작업의 기존 기록이 있으면 갱신하고 중복·빈 기록을 만들지 않는다. 대상이 불명확하거나 연결이 막히면 외부 기록만 보류하고 보고한다.
+## Cleanup usage
+
+Use for an explicit cleanup request or the generated-file trigger in [section 6](../AGENTS.md#generated-file-cleanup). Follow its approval boundaries and the [main mode](../AGENTS.md#main-modes); use the separately installed cleanup skill at `${CODEX_HOME_DIR}/skills/ai-cleanup/SKILL.md` for its supported categories.
+
+1. Inventory only the relevant roots: category, logical/allocated size, age, references, and current use. Tool/cache labels and Laya classifications identify candidates; they do not prove a file is disposable. For a redundant archive, verify every retained original against its member contents, for example with SHA-256.
+2. Record relevant Git/worktree state and exact protected paths before execution. Apply the central recovery-history rule to IDE `LocalHistory`, rather than treating its cache-directory location as disposal evidence.
+3. For Mole, inspect the installed whitelist loader and matcher. Register concrete absolute protected roots. Query protection for each root, its descendants, and candidate ancestors, even when the protected root is currently absent; also check an eligible sibling. An unanchored `*/LocalHistory` pattern did not block removal of its Google cache ancestor. Use protection-only queries, without calling deletion functions.
+4. Recheck the selected objects' identity/content and usage/copy evidence before using the authorized cleanup route. Keep changed or uncertain candidates in the record with their skip reasons; use the central confirmation path where required.
+5. Compare protected paths and project state afterward. Distinguish moved-to-Trash files, removed logical/allocated bytes, tool estimates, and net free-space change. If a protected path is missing, stop further cleanup and record the incident and actual recovery status.
