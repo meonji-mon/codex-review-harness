@@ -1,0 +1,19 @@
+# Add reviewed entries to the existing Mole whitelist; never replace that file.
+# Render USER_HOME to an absolute path first. Keep existing custom protections.
+# These are generic preservation examples, not a copy of a personal whitelist.
+# Whole IDE roots intentionally also preserve rebuildable indexes/caches.
+${USER_HOME}/Library/Caches/Google/AndroidStudio*
+${USER_HOME}/Library/Caches/JetBrains*
+${USER_HOME}/Library/Application Support/Google/AndroidStudio*
+${USER_HOME}/Library/Application Support/JetBrains*
+${USER_HOME}/.codex
+${USER_HOME}/.claude/projects
+${USER_HOME}/.claude.json
+${USER_HOME}/.opencodex
+${USER_HOME}/.opencodex-local
+${USER_HOME}/.config
+${USER_HOME}/Library/Application Support/Claude-3p/configLibrary/_meta.json
+${USER_HOME}/Pictures
+${USER_HOME}/Library/Mobile Documents
+${USER_HOME}/Library/CloudStorage
+# Add absolute project, SDK, simulator and custom IDE/recovery roots locally.

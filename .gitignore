@@ -3,3 +3,7 @@
 !.env.example
 build/
 .DS_Store
+__pycache__/
+*.py[cod]
+templates/skills/ai-cleanup/cleanup.toml
+templates/skills/ai-cleanup/mole-whitelist.local

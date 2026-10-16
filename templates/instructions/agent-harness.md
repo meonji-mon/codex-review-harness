@@ -26,8 +26,8 @@ For a cleanup request or the generated-file trigger in [section 6](../AGENTS.md#
 ```text
 - Goal: reclaim space from verified disposable files
 - Scope: approved cleanup targets; preserve current work, recovery history, and protected paths
-- Order: inventory and usage/copy evidence → protection-only path checks → authorized cleanup
-- Verification: compare project/protected-path baselines; report removed/moved bytes separately from free-space change
+- Order: inventory and copy evidence → shared protection checks → recovery intent and source recheck → authorized Trash move
+- Verification: compare protected-path baselines and move records; report moved bytes separately from free-space change; inventory old Trash only
 ```
 
 ## Assignment examples

@@ -1,0 +1,68 @@
+# Public schema example only. Copy to ignored cleanup.toml and review locally.
+# Candidate globs/project roots are empty; no personal cleanup scope is shipped.
+# Preserve state_dir and restore journals when rolling back code/config changes.
+min_age_days = 14
+trash_dir = "~/.Trash"
+trash_fallback_dir = "~/.codex/maintenance/trash"
+state_dir = "~/.codex/maintenance"
+max_plan_bytes = 5_000_000_000
+max_plan_items = 200
+archive_max_item_bytes = 20_000_000
+large_image_bytes = 5_000_000
+
+[protection]
+# Register these absolute patterns in the persistent Mole whitelist first.
+# Missing policy or a missing required rule holds cleanup candidates.
+required_mole_patterns = [
+  "~/Library/Caches/Google/AndroidStudio*",
+  "~/Library/Caches/JetBrains*",
+  "~/Library/Application Support/Google/AndroidStudio*",
+  "~/Library/Application Support/JetBrains*",
+]
+
+[archive]
+# Deliberately unconfigured. Use a verified private destination and local keys.
+repo = ""
+age_recipient = ""
+identity_file = "~/.config/age/ai-backups.key"
+path_prefix = ""
+max_input_bytes = 200_000_000
+
+[backups]
+globs = []
+exclude = ["~/.codex/sessions/**", "~/.codex/archived_sessions/**", "~/.codex/skills/**", "~/.codex/plugins/**"]
+
+[test_outputs]
+globs = []
+
+[build_artifacts]
+globs = []
+keep_recent_archives_days = 30
+
+[scratch]
+globs = []
+
+[images]
+screenshot_globs = []
+# Disabled by default. Enable only after reviewing actual usage/references.
+generated_dir = "~/.codex/generated_images"
+extensions = []
+project_roots = []
+project_max_depth = 4
+project_active_days = 30
+extra_projects = []
+protect_dir_names = ["app-store-screenshots", "appstore", "store", "fastlane", "metadata", "marketing", "press", "brand", "branding", "release-assets"]
+skip_dirs = ["node_modules", ".git", "build", "Build", "DerivedData", "Pods", ".dart_tool", ".next", "dist", "graphify-out", ".expo", ".gradle", "vendor", ".venv", "venv", "__pycache__", ".symlinks", "coverage"]
+
+[never_touch]
+paths = ["~/.codex/sessions", "~/.codex/archived_sessions", "~/.claude/projects", "~/.codex/config.toml", "~/.codex/AGENTS.md", "~/.codex/auth.json", "~/.claude.json", "~/.opencodex/config.json", "~/Library/Application Support/Claude-3p/configLibrary/_meta.json", "~/Pictures", "~/Library/Mobile Documents"]
+
+[auto]
+capture_dir_names = ["tmp", "output", "artifacts"]
+max_bytes_per_run = 5_000_000_000
+batch_items = 200
+max_batches_per_run = 25
+min_interval_hours = 24
+
+[trash]
+report_age_days = 7 # Inventory only; never automatically empty managed Trash.
