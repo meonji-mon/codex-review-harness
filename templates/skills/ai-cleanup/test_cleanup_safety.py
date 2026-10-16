@@ -2,6 +2,7 @@
 import contextlib
 import copy
 import errno
+import hashlib
 import io
 import json
 import os
@@ -202,6 +203,31 @@ class JournalTests(unittest.TestCase):
 
 
 class PipelineTests(unittest.TestCase):
+    def test_restore_late_conflict_is_unresolved_without_transferring(self):
+        original = "/memory/original"; payload = "/memory/trash/ai-cleanup-memory/files/payload"
+        fp = example_snapshot()
+        entry = {"from": original, "to": payload, "fingerprint": fp, "size": 3, "category": "scratch"}
+        original_exists = iter([False, True]); durable = []
+        def exists(path):
+            return next(original_exists) if path == original else True
+        with patch.object(cleanup.os.path, "exists", return_value=True), \
+             patch.object(cleanup.os.path, "lexists", side_effect=exists), \
+             patch.object(cleanup.os.path, "islink", return_value=False), \
+             patch.object(cleanup.os.path, "isdir", return_value=True), \
+             patch.object(cleanup.os, "stat", return_value=SimpleNamespace(st_dev=1, st_ino=3)), \
+             patch.object(cleanup, "journal_lock", return_value=contextlib.nullcontext()), \
+             patch('builtins.open', mock_open(read_data=json.dumps({"items": [entry]}))), \
+             patch.object(cleanup, "snapshot", return_value=fp), \
+             patch.object(cleanup, "atomic_record", side_effect=lambda p,data: durable.append(copy.deepcopy(data))), \
+             patch.object(cleanup, "rename_exclusive") as transfer, patch.object(cleanup, "log"), \
+             contextlib.redirect_stdout(io.StringIO()) as output:
+            result = cleanup.restore({"trash_dir": "/memory/trash", "trash_fallback_dir": "/memory/fallback"}, SimpleNamespace(id="memory"))
+        self.assertEqual(result, 4)
+        reported = json.loads(output.getvalue())
+        self.assertFalse(reported["ok"]); self.assertEqual(reported["unresolved"], 1)
+        self.assertEqual(durable[-1]["items"][0]["restore_status"], "held")
+        transfer.assert_not_called()
+
     def test_restore_conflict_is_unresolved_and_does_not_transfer(self):
         fp = example_snapshot()
         entry = {"from": "/memory/original", "to": "/memory/trash/ai-cleanup-memory/files/payload", "fingerprint": fp}
@@ -286,6 +312,102 @@ class PipelineTests(unittest.TestCase):
         self.assertFalse(result["permanent_deletion_performed"])
         self.assertEqual(result["emptied"], [])
         self.assertEqual(len(result["old_trash_candidates"]), 1)
+
+
+class AutoScopeTests(unittest.TestCase):
+    def test_category_and_canonical_path_must_both_be_in_scope(self):
+        generated = cleanup.X(os.path.join(os.environ.get("CODEX_HOME", os.path.join(cleanup.HOME, ".codex")), "generated_images"))
+        cases = [
+            ("build_artifact", "/private/tmp/build-output", True),
+            ("build_artifact", "~/Documents/project/build", False),
+            ("scratch", "/private/tmp/scratch.log", True),
+            ("scratch", "/private/tmp-other/scratch.log", False),
+            ("scratch", "/private/tmp/../outside.log", False),
+            ("scratch", "~/Documents/scratch.log", False),
+            ("test_output", "~/api-spec-test-old", True),
+            ("test_output", "~/Documents/api-spec-test-old", False),
+            ("test_output", "~/other-test-20200101", False),
+            ("test_output", "/private/tmp/test-output", True),
+            ("scratch", "/private/tmp", False),
+            ("screenshot", "~/Desktop/Screenshot-old.png", True),
+            ("screenshot", "~/Documents/Screenshot-old.png", False),
+            ("image_generated", generated + "/image.png", True),
+            ("image_generated", "~/Documents/image.png", False),
+        ]
+        for category, path, expected in cases:
+            with self.subTest(category=category, path=path):
+                self.assertEqual(cleanup.auto_tier({}, {"category": category, "path": path, "action": "trash"}), expected)
+
+    def test_project_capture_cannot_escape_project_or_expand_allowed_names(self):
+        item = {"category": "image_project_untracked", "path": "/example/project/tmp/capture.png", "project": "/example/project", "action": "trash"}
+        self.assertTrue(cleanup.auto_tier({}, item))
+        self.assertFalse(cleanup.auto_tier({}, {**item, "path": "/example/other/tmp/capture.png"}))
+        self.assertFalse(cleanup.auto_tier({"auto": {"capture_dir_names": ["assets"]}}, {**item, "path": "/example/project/assets/image.png"}))
+
+    def test_symlink_resolution_cannot_expand_automatic_scope(self):
+        normalize = cleanup.X
+        def resolved(path):
+            return normalize("~/Documents/live-project") if path == "/private/tmp/link" else normalize(path)
+        with patch.object(cleanup, "X", side_effect=resolved):
+            self.assertFalse(cleanup.auto_tier({}, {"category": "scratch", "path": "/private/tmp/link", "action": "trash"}))
+
+    def test_auto_keeps_out_of_scope_candidates_for_confirmation(self):
+        item = {"category": "build_artifact", "path": "~/Documents/project/build", "action": "trash", "size": 3, "age_days": 30}
+        with patch.object(cleanup, "last_auto_run", return_value=None), \
+             patch.object(cleanup, "plan", return_value=("/memory/plan", {"items": [item], "plan_id": "memory"})), \
+             patch.object(cleanup, "trash_root", return_value=("/memory/trash", None)), \
+             patch.object(cleanup, "old_trash_candidates", return_value=[]), \
+             patch.object(cleanup, "move_items") as move, patch.object(cleanup, "log"), \
+             contextlib.redirect_stdout(io.StringIO()) as output:
+            result = cleanup.auto({}, SimpleNamespace(dry_run=False, force=False))
+        self.assertEqual(result, 0); move.assert_not_called()
+        reported = json.loads(output.getvalue())
+        self.assertEqual(reported["auto_by_category"], {})
+        self.assertEqual(reported["confirm_tier_by_category"]["build_artifact"]["count"], 1)
+
+
+class ArchiveVerificationTests(unittest.TestCase):
+    def verify_record(self, members, observed):
+        data = b"encrypted-in-memory"
+        record = {"repo": "example/private", "path": "archive.age", "sha256": hashlib.sha256(data).hexdigest(),
+                  "items": ["~/directory-root"], "verified": True}
+        if members is not None: record["archive_members"] = members
+        writes = []; actual_dump = json.dump
+        def capture(record, stream, **kwargs):
+            writes.append(copy.deepcopy(record)); actual_dump(record, stream, **kwargs)
+        with patch.object(cleanup, "load_plan", return_value={"plan_id": "memory"}), \
+             patch.object(cleanup.os.path, "exists", return_value=True), \
+             patch('builtins.open', mock_open(read_data=json.dumps(record))), \
+             patch.object(cleanup, "gh_get", return_value=data) as download, \
+             patch.object(cleanup, "decrypt_list", return_value=observed), \
+             patch.object(cleanup.json, "dump", side_effect=capture), patch.object(cleanup, "log"), \
+             contextlib.redirect_stdout(io.StringIO()) as output:
+            result = cleanup.verify({"state_dir": "/memory/state"}, SimpleNamespace(plan="/memory/plan"))
+        return result, json.loads(output.getvalue()), writes, download.call_count
+
+    def test_member_names_use_one_rule_for_home_and_external_paths(self):
+        self.assertEqual(cleanup.archive_member_name("~/directory/a.txt"), "directory/a.txt")
+        self.assertEqual(cleanup.archive_member_name("~/single.txt"), "single.txt")
+        self.assertEqual(cleanup.archive_member_name("/example/external/a.txt"), "example/external/a.txt")
+
+    def test_verify_accepts_recorded_single_directory_and_external_members(self):
+        for members in (["single.txt"], ["directory/a.txt", "directory/nested/b.txt"], ["example/external/a.txt"]):
+            with self.subTest(members=members):
+                code, report, writes, _ = self.verify_record(members, list(reversed(members)))
+                self.assertEqual(code, 0); self.assertTrue(report["ok"])
+                self.assertEqual(writes[-1]["archive_members"], members)
+
+    def test_verify_refuses_missing_extra_and_unreadable_members(self):
+        for observed in ([], ["directory/a.txt", "unexpected.txt"], None):
+            with self.subTest(observed=observed):
+                code, report, writes, _ = self.verify_record(["directory/a.txt"], observed)
+                self.assertEqual(code, 5); self.assertFalse(report["ok"])
+                self.assertFalse(writes[-1]["verified"])
+
+    def test_legacy_record_without_member_evidence_is_not_overwritten(self):
+        code, report, writes, downloads = self.verify_record(None, ["directory/a.txt"])
+        self.assertEqual(code, 4); self.assertFalse(report["ok"])
+        self.assertEqual(writes, []); self.assertEqual(downloads, 0)
 
 
 if __name__ == "__main__":

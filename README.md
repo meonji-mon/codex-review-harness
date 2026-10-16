@@ -41,6 +41,6 @@ python3 -B templates/skills/ai-cleanup/verify_non_destructive.py
 CLEANUP_TEST_LIVE_MOLE=1 python3 -B templates/skills/ai-cleanup/verify_non_destructive.py
 ```
 
-The default suite uses in-memory transfer/journal I/O; live-policy mode additionally queries installed Mole protections. The runner blocks real filesystem mutations and native move calls. These checks do not establish actual Trash moves, restores, cross-volume behavior, or power-loss recovery. Destructive-path independent review remains pending; this publication is for review and does not clear cleanup execution or release.
+The default suite uses in-memory transfer/journal I/O; live-policy mode additionally queries installed Mole protections. The runner blocks real filesystem mutations and native move calls. These checks do not establish actual Trash moves, restores, cross-volume behavior, or power-loss recovery. They do not replace required independent review or grant merge, release, or cleanup execution approval; central conditions still apply.
 
 The renderer/installer, actual cleanup/move/restore stages, app shutdown, and agent-loading checks are outside this publication's verification scope. No personal whitelist or operational evidence is bundled.

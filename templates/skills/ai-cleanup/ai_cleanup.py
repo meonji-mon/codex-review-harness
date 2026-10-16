@@ -382,6 +382,11 @@ def gh_get(repo, rpath):
 
 def key_path(cfg): return X(cfg["archive"].get("identity_file", "~/.config/age/ai-backups.key"))
 
+def archive_member_name(path):
+    """Use the same normalized member name when packing and recording verification input."""
+    path = os.path.abspath(os.path.expanduser(path))
+    return os.path.relpath(path, HOME) if path.startswith(HOME + "/") else path.lstrip("/")
+
 def decrypt_list(cfg, data):
     """Decrypt in memory/pipes (no plaintext on disk) and return the tar member names, or None if no key / failure."""
     key = key_path(cfg)
@@ -415,7 +420,7 @@ def encrypt_upload(cfg, aid, paths, meta):
     total = sum(os.lstat(f).st_size for f in files)
     if total > cfg["archive"].get("max_input_bytes", 200_000_000):
         return {"ok": False, "refused": f"input {total} bytes exceeds [archive] max_input_bytes"}
-    arc = lambda f: os.path.relpath(f, HOME) if f.startswith(HOME + "/") else f.lstrip("/")
+    members = [archive_member_name(f) for f in files]
     work = tempfile.mkdtemp(prefix="ai-cleanup-")
     try:
         enc = os.path.join(work, "a.age")
@@ -424,7 +429,7 @@ def encrypt_upload(cfg, aid, paths, meta):
             zs = subprocess.Popen([tool("zstd"), "-q", "-19", "-T0", "-c"], stdin=subprocess.PIPE, stdout=age.stdin)
             age.stdin.close()
             with tarfile.open(fileobj=zs.stdin, mode="w|") as tf:
-                for f in files: tf.add(f, arcname=arc(f), recursive=False)
+                for f, member in zip(files, members): tf.add(f, arcname=member, recursive=False)
             zs.stdin.close(); zrc = zs.wait(); arc_rc = age.wait()
         if zrc or arc_rc: return {"ok": False, "error": f"zstd/age failed ({zrc}/{arc_rc})"}
         data = open(enc, "rb").read(); digest = hashlib.sha256(data).hexdigest()
@@ -432,8 +437,8 @@ def encrypt_upload(cfg, aid, paths, meta):
         rarc, rman = remote_paths(cfg, aid)
         manifest = {"id": aid, "created": time.strftime("%Y-%m-%dT%H:%M:%S%z"), "host": os.uname().nodename, **meta,
                     "format": "tar | zstd | age", "archive": rarc, "archive_sha256": digest, "archive_bytes": len(data),
-                    "files": [{"path": short(f), "arcname": arc(f), "size": os.lstat(f).st_size, "mtime": int(os.lstat(f).st_mtime),
-                               "sha256": sha256(f) if os.path.isfile(f) and not os.path.islink(f) else None} for f in files]}
+                    "files": [{"path": short(f), "arcname": member, "size": os.lstat(f).st_size, "mtime": int(os.lstat(f).st_mtime),
+                               "sha256": sha256(f) if os.path.isfile(f) and not os.path.islink(f) else None} for f, member in zip(files, members)]}
         mdir = os.path.join(work, "m"); os.makedirs(mdir)
         mbytes = (json.dumps(manifest, ensure_ascii=False, indent=1) + "\n").encode()
         open(os.path.join(mdir, "manifest.json"), "wb").write(mbytes)
@@ -448,9 +453,10 @@ def encrypt_upload(cfg, aid, paths, meta):
         back = gh_get(repo, rarc)
         sha_ok = back is not None and hashlib.sha256(back).hexdigest() == digest
         names = decrypt_list(cfg, back) if sha_ok else None
-        rt_ok = (names is not None and sorted(names) == sorted(arc(f) for f in files)) if os.path.exists(key_path(cfg)) else "no key"
-        return {"ok": bool(sha_ok and rt_ok is not False), "id": aid, "repo": repo, "path": rarc, "manifest": rman, "sha256": digest, "bytes": len(data),
+        rt_ok = names is not None and sorted(names) == sorted(members)
+        return {"ok": bool(sha_ok and rt_ok), "id": aid, "repo": repo, "path": rarc, "manifest": rman, "sha256": digest, "bytes": len(data),
                 "files": len(files), "input_bytes": total, "verified": sha_ok, "decrypt_roundtrip": rt_ok,
+                "archive_members": members,
                 "verified_at": time.strftime("%Y-%m-%dT%H:%M:%S%z")}
     finally:
         shutil.rmtree(work, ignore_errors=True)
@@ -470,13 +476,16 @@ def archive(cfg, args):
 def verify(cfg, args):
     p = load_plan(args.plan); sd = X(cfg["state_dir"]); fn = os.path.join(sd, f"archive-{p['plan_id']}.json")
     if not os.path.exists(fn): print(json.dumps({"ok": False, "error": "no archive record"})); return 3
-    rec = json.load(open(fn)); data = gh_get(rec["repo"], rec["path"])
+    rec = json.load(open(fn))
+    members = rec.get("archive_members")
+    if not isinstance(members, list) or not members or any(not isinstance(member, str) for member in members):
+        print(json.dumps({"ok": False, "error": "archive lacks recorded member names; preserve this legacy record and recreate a verified archive from approved originals"})); return 4
+    data = gh_get(rec["repo"], rec["path"])
     if data is None: print(json.dumps({"ok": False, "error": "download failed"})); return 4
     ok = hashlib.sha256(data).hexdigest() == rec["sha256"]
     names = decrypt_list(cfg, data) if ok else None
-    want = sorted(os.path.relpath(X(i), HOME) for i in rec["items"])
-    rt = (names is not None and sorted(names) == want) if os.path.exists(key_path(cfg)) else "no key"
-    rec["verified"] = bool(ok and rt is not False); rec["decrypt_roundtrip"] = rt; rec["verified_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
+    rt = names is not None and sorted(names) == sorted(members)
+    rec["verified"] = bool(ok and rt); rec["decrypt_roundtrip"] = rt; rec["verified_at"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
     json.dump(rec, open(fn, "w"), indent=1); log(cfg, {"stage": "verify", "plan_id": p["plan_id"], "ok": rec["verified"], "decrypt_roundtrip": rt})
     print(json.dumps({"ok": rec["verified"], "sha256_match": ok, "decrypt_roundtrip": rt, "members": len(names or [])}))
     return 0 if rec["verified"] else 5
@@ -569,16 +578,26 @@ def delete(cfg, args):
 
 # ---------- auto tier ----------
 def auto_tier(cfg, it):
-    """True if the item is in the auto (no-confirm) tier."""
+    """Central automatic scope cannot be widened by candidate globs or labels."""
     if it["action"] != "trash": return False
-    a = cfg.get("auto", {}); cap_dirs = {d.lower() for d in a.get("capture_dir_names", ["tmp", "output", "artifacts"])}
-    c, path = it["category"], it["path"]
-    if c in ("build_artifact", "scratch", "test_output"): return True
-    if c == "image_generated": return True
+    a = cfg.get("auto", {})
+    cap_dirs = {d.lower() for d in a.get("capture_dir_names", ["tmp", "output", "artifacts"])} & {"tmp", "output", "artifacts"}
+    c, path = it["category"], X(it["path"])
+    tmp_root = X("/private/tmp")
+    in_tmp = path != tmp_root and under(path, [tmp_root])
+    if c in ("build_artifact", "scratch"): return in_tmp
+    if c == "test_output":
+        return in_tmp or (os.path.dirname(path) == X(HOME) and fnmatch.fnmatchcase(os.path.basename(path), "api-spec-test-*"))
+    if c == "image_generated":
+        generated = X(os.path.join(os.environ.get("CODEX_HOME", os.path.join(HOME, ".codex")), "generated_images"))
+        return path != generated and under(path, [generated])
     if c == "screenshot":
-        return path.startswith("~/Desktop/") or path.startswith("/private/tmp/")
+        desktop = X(os.path.join(HOME, "Desktop"))
+        return in_tmp or (path != desktop and under(path, [desktop]))
     if c in ("image_project_untracked", "image_large") and it.get("project"):
-        rel = os.path.relpath(os.path.expanduser(path), os.path.expanduser(it["project"])).lower().split("/")[:-1]
+        project = X(it["project"])
+        if path == project or not under(path, [project]): return False
+        rel = os.path.relpath(path, project).lower().split("/")[:-1]
         return any(seg in cap_dirs for seg in rel)
     return False
 
@@ -699,6 +718,7 @@ def restore(cfg, args):
                 it["restored_fingerprint"] = observed
             if recorded_transfer(rec, it, lambda data: atomic_record(rp, data), recheck,
                                  lambda: rename_exclusive(src, to, trashed), verify, restoring=True): back += 1
+            else: skipped.append({"path": it["from"], "why": it.get("reason", "restore held at final recheck")})
     unresolved = [item for item in skipped if item["why"] != "at_original"]
     log(cfg, {"stage": "restore", "id": args.id, "restored": back, "skipped": len(skipped), "unresolved": len(unresolved)})
     print(json.dumps({"ok": not unresolved, "restored": back, "skipped": skipped[:50], "unresolved": len(unresolved)}, ensure_ascii=False))

@@ -32,7 +32,7 @@ The first command uses memory-only transfer/journal I/O. The second also queries
 python3 ${CODEX_HOME_DIR}/skills/ai-cleanup/ai_cleanup.py --auto
 ```
 
-The script plans/processes automatic categories and checks the daily limit from the last `stage: auto` record. Link `summary`, destination, `restore` command, and `confirm_tier_by_category`.
+The script plans/processes automatic categories and checks the daily limit from the last `stage: auto` record. Candidate globs cannot expand central automatic scope: normalized paths outside its roots remain confirmation-tier. Project captures must stay inside their project and the central capture-directory names. Link `summary`, destination, `restore` command, and `confirm_tier_by_category`.
 
 Trash: `~/.Trash/ai-cleanup-<id>/`; fallback `~/.codex/maintenance/trash/ai-cleanup-<id>/`. Automatic execution moves files only. Old managed Trash is reported and never permanently deleted by this script; permanent deletion is a separate task under central approval. Restore works only while recorded data exists and passes verification; there is no guaranteed retention period. Plan and dry-run modes write local metadata, so use the test runner when no filesystem mutations are allowed.
 
@@ -48,7 +48,7 @@ Each `restore.json` entry is flushed/fsynced as `intent` before moving, then upd
 
 1. **Plan:** no stage argument or `--stage plan`; `--no-images` skips project/generated-image inspection. Read `plan_id`, counts/bytes, `needs_user_confirm`, `limits_exceeded`, and `tools`.
 2. **Archive:** `--stage archive --plan <file>`. Stream tar → zstd → age, scan manifests, upload to the configured private destination, and verify the re-download.
-3. **Verify:** `--stage verify --plan <file>`. Match re-downloaded SHA-256 and privately decrypted member lists. Missing prerequisites preserve the originals.
+3. **Verify:** `--stage verify --plan <file>`. Match re-downloaded SHA-256 and privately decrypted members against the exact member list recorded during packing, including directory contents and paths outside Home. Missing/extra members or failed decryption cannot pass. Legacy records without member evidence are preserved and held; recreate an archive only from approved originals. Missing prerequisites preserve the originals.
 4. **Move:** `--stage delete --plan <file> --confirm <plan_id>`. `--only-category backup` narrows the selection; `--allow-large` requires approved large scope. Central approval/stopping/preservation rules apply.
 
 For a required pre-change backup, use `--stage backup --path <files-or-folders> --reason <reason>` with the same encrypted upload and verification. Restore only needed files using the configured key; keep private keys out of source and output.
