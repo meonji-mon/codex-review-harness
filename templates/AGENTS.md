@@ -133,6 +133,12 @@ This table applies only to the main agent. Subagents follow section 9 and their 
 - Keep generated logs, caches, test outputs, and temporary downloads out of commits; distinguish them from real app assets.
 - Do not create local backup copies. Recover Git files from history; report file/line and before/after summaries for non-Git settings. Existing backups and required backups for hard-to-reverse payment, signing, or bulk configuration use the cleanup skill's encrypted private storage and verification path; report the resulting path.
 
+#### Git recording
+
+- For small, clearly scoped changes, prefer direct commits on `main` when repository rules permit. Use a branch/PR for large work needing isolation or when repository rules require it. Respect an existing task branch and unrelated work; never force a branch switch.
+- Branch choice does not waive approval, security, verification, or section 7 required review. Clear required blockers before integrating into `main`; respect protected branches and project policies.
+- Commit only owned changes with a clear message. Record what changed, why, actual verification, and required but unrun checks in the commit body or linked change record. Push only within the approved repository/remote scope; never force-push.
+
 #### Generated-file cleanup
 
 - At the end of work that created AI backups, test/scratch outputs, build artifacts, or unused images, or when cleanup is requested, apply `skills/ai-cleanup/SKILL.md`. The mode table determines execution and owner. Automatic execution is limited to once per day using the last `stage: auto` record.

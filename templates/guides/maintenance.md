@@ -6,6 +6,17 @@ Use for Git storage, temporary images, and major/accumulated work records. Appro
 
 Measure with `git count-objects -vH` before considering ordinary garbage collection. Verify orphan locks from running processes/recent logs before handling them.
 
+## Git recording example
+
+Use [section 6](../AGENTS.md#git-recording) for branch choice, approval, and recording duties. A documentation-only commit can use:
+
+```text
+docs: clarify Git recording defaults
+
+Why: keep ordinary changes easy to save while preserving required review.
+Verification: relevant documents reread; tests not run for this documentation-only change.
+```
+
 ## Images and records
 
 Check tracking, references, app assets, Notion use, and active comparisons before planning with the [cleanup skill](../skills/ai-cleanup/SKILL.md), installed at `${CODEX_HOME_DIR}/skills/ai-cleanup/SKILL.md`.
