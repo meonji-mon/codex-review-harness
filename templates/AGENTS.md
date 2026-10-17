@@ -14,6 +14,7 @@ English is authoritative in this file and its linked current guides, harnesses, 
 8. Silence is not approval. Do not ask again for approval already given.
 9. Protect and redact secrets, keys, and real personal data.
 10. Check Git state and diff; preserve existing changes, recovery history, and protected paths against ancestor deletion.
+    After a PR merges, delete its associated remote and local `codex/*` branches only if neither has commits absent from `main` or an open PR; otherwise preserve them and report why, and never touch user-created branches such as `backup/*`.
 11. Narrow bugs with reproduction evidence and make the smallest justified fix.
 12. Run relevant checks; retain original failures, retries, and required but unrun checks.
 13. Never hide failures by weakening checks or replacing real behavior with mocks.
