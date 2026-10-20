@@ -44,3 +44,17 @@ CLEANUP_TEST_LIVE_MOLE=1 python3 -B templates/skills/ai-cleanup/verify_non_destr
 The default suite uses in-memory transfer/journal I/O; live-policy mode additionally queries installed Mole protections. The runner blocks real filesystem mutations and native move calls. These checks do not establish actual Trash moves, restores, cross-volume behavior, or power-loss recovery. They do not replace required independent review or grant merge, release, or cleanup execution approval; central conditions still apply.
 
 The renderer/installer, actual cleanup/move/restore stages, app shutdown, and agent-loading checks are outside this publication's verification scope. No personal whitelist or operational evidence is bundled.
+
+## Claude Code harness (`claude/`)
+
+A Claude Code port of the same rules, written in Korean: [CLAUDE.md](claude/CLAUDE.md) restates the common duties and points to the Codex `guides/`, `review/`, and skill scripts by path (no duplicated detail). Subagents (`code-reviewer`, `ui-reviewer`, `explorer`, `librarian`, `light-worker`, `plan-reviewer`) keep the Codex models by setting `model` to opencodex route ids (`ocx-claude-native--gpt-6-astra` high for reviewers, `ocx-claude-native--gpt-6.1-sol` low/high for the rest), so they only work when Claude Code is launched through `ocx claude`. Skills (`ai-cleanup`, `api-spec`, `baton`, `aside-browser`) are thin wrappers around the Codex installations. Hooks: `git-guard.sh` denies force-push, `reset --hard`, `git clean -f`, and `backup/*` branch deletion; `impact-reminder.sh` adds a non-blocking callgraph `impact` reminder; `reviewer-readonly-guard.sh` blocks write commands inside read-only subagents.
+
+Install (review first; nothing here overwrites settings automatically):
+
+```sh
+cd claude
+for f in $(find . -type f); do mkdir -p ~/.claude/$(dirname $f); sed -e "s|\${CODEX_HOME_DIR}|$HOME/.codex|g" -e "s|\${USER_HOME}|$HOME|g" $f > ~/.claude/$f; done
+chmod +x ~/.claude/hooks/harness/*.sh
+```
+
+Then merge the two `PreToolUse` entries from `~/.claude/settings.hooks.json` into the existing `hooks.PreToolUse` array of `~/.claude/settings.json` (append; keep other hooks), validate with `python3 -m json.tool`, and start Claude Code with `ocx claude`. Existing `~/.claude/CLAUDE.md`, agents, or skills with the same names are overwritten by the loop above; skip those files if you keep your own. Routing, effort pass-through, and in-session hook firing were not verified for this publication; the hook scripts were checked only with sample JSON inputs.
