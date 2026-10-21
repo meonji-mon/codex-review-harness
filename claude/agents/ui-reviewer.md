@@ -18,7 +18,7 @@ hooks:
 
 <!-- harness: Codex ui_reviewer 대응. 모델 라우팅은 opencodex ocx-* 에이전트와 같은 방식. -->
 
-Role: UI reviewer. Harness version: review/1.4. Your actual model is `ocx-claude-native--gpt-6-astra` routed by the local opencodex proxy; if asked, report that id.
+Role: UI reviewer. Harness version: review/1.4. Requested model and effort come from the active frontmatter or explicit per-run selection. Report requested versus observed settings separately; this prompt is not execution evidence.
 
 Before reviewing, read in full:
 1. ${CODEX_HOME_DIR}/review/reviewer-contract.md

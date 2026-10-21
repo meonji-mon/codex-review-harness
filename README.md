@@ -47,7 +47,37 @@ The renderer/installer, actual cleanup/move/restore stages, app shutdown, and ag
 
 ## Claude Code harness (`claude/`)
 
-A Claude Code port of the same rules, written in Korean: [CLAUDE.md](claude/CLAUDE.md) restates the common duties and points to the Codex `guides/`, `review/`, and skill scripts by path (no duplicated detail). Subagents (`code-reviewer`, `ui-reviewer`, `explorer`, `librarian`, `light-worker`, `plan-reviewer`) keep the Codex models by setting `model` to opencodex route ids (`ocx-claude-native--gpt-6-astra` high for reviewers, `ocx-claude-native--gpt-6.1-sol` low/high for the rest), so they only work when Claude Code is launched through `ocx claude`. Skills (`ai-cleanup`, `api-spec`, `baton`, `aside-browser`) are thin wrappers around the Codex installations. Hooks: `git-guard.sh` denies force-push, `reset --hard`, `git clean -f`, and `backup/*` branch deletion; `impact-reminder.sh` adds a non-blocking callgraph `impact` reminder; `reviewer-readonly-guard.sh` blocks write commands inside read-only subagents.
+**Runtime status: UNVERIFIED.** Authenticated Claude Code reviewer execution, actual model/effort delivery, and integrated enforcement have not passed a live review. This configuration is published with that limitation; publication is not a reviewer PASS or actual-cleanup approval. No further login, model calls, deletion, or UI reviewer calls were used for this update.
+
+A Claude Code port of the same rules, written in Korean: [CLAUDE.md](claude/CLAUDE.md) restates common duties and points to the Codex guides, reviewer contract, and skill scripts. Agent frontmatter records requested OpenCodex models/effort; actual routing and application require execution records. Skills are thin wrappers around the Codex installations.
+
+`code-reviewer` has only `Read`, `Grep`, and `Glob`, with no Bash, MCP, edit, skill, or agent tools. For macOS execution evidence, [run_code_review.py](claude/scripts/run_code_review.py) prepares a separate macOS read-only Claude Code dispatcher and one native `code-reviewer`. The dispatcher requests Sol/low; reviewer model/effort default to its frontmatter (Astra/high), with explicit per-run overrides. Normal main permissions and settings stay unchanged by the runner. The worker's intended writable scope is its isolated run state and per-run Claude transcript namespace. Kernel queries inspect permissions without write probes. The collector is not a verified end-to-end review path yet. It uses the normal `ocx claude` authentication environment and never records credential values or selects accounts.
+
+```sh
+python3 claude/scripts/run_code_review.py --repo <absolute-repo> --brief <redacted-brief> --run-dir <new-private-directory-outside-repo> --reviewer-model claude-sonnet-5-5 --reviewer-effort high
+python3 -B claude/tests/test_guards.py
+python3 -B claude/tests/test_model_selection.py
+```
+
+### Model and effort selection
+
+Claude Code supports `/model`, `/effort`, startup `--model`/`--effort`, and subagent frontmatter `model`/`effort`. The effort environment variable takes precedence over frontmatter. A gateway/custom ID may not receive all native capability controls; do not fabricate `behavesAs` or claim equivalent reasoning across models. See [official model settings](https://code.claude.com/docs/en/model-config#adjust-effort-level) and [subagent effort](https://code.claude.com/docs/en/sub-agents#choose-an-effort-level).
+
+These commands only read metadata or preview settings; they do not invoke a model, log in, or change files:
+
+```sh
+python3 claude/scripts/run_code_review.py --list-models
+python3 claude/scripts/run_code_review.py --print-model-picker
+python3 claude/scripts/run_code_review.py --reviewer-model claude-opus-5-5 --reviewer-effort max --show-selection
+```
+
+The picker snippet uses the documented user-level `modelPicker.options` schema and adds advertised OpenCodex choices alongside built-ins. Merge only `modelPicker` into your user settings; keep permissions, hooks, credentials, and the default model. Labels do not prove routing or capability. It never sets `behavesAs` or fabricated capability flags. [Official picker schema](https://code.claude.com/docs/en/settings-reference#modelpicker)
+
+The reviewer adapter accepts explicit catalog models and `low`, `medium`, `high`, `xhigh`, or `max`; availability of a level on the actual model remains unverified. Selecting a main model does not select another agent. Grok remains instruction-writing only, Terra is excluded, and automatic/combo routes are not code-reviewer choices. Unsupported selections fail without substitution. Model/effort overrides never broaden role permissions or run agents by themselves.
+
+Run directories retain the fixed packet, hashes, native stream/transcripts, and kernel permission evidence. Execution success alone is not review clearance: inspect actual Agent calls, full contract/packet reads, OpenCodex request records for model/effort, the reviewer verdict, and unchanged source. Recheck affected scope with the original reviewer when needed. Unsupported platforms/routing or unknown settings cannot pass mandatory review. This execution path requires the installed Claude Code CLI options (verified against 2.1.293) and macOS sandbox support; it never falls back to another model.
+
+Hooks remain supplementary. `git-guard.sh` recognizes absolute Git paths, global options, compound commands and common shell wrappers. It does not fully sandbox arbitrary programs. `reviewer-readonly-guard.sh` accepts a narrow local-read command list and rejects interpreters, compound commands, redirects and all `gh` calls, including implicit POST/GraphQL requests. Neither hook executes the command it inspects. Malformed input is denied; interpreter/helper failures exit 2. `impact-reminder.sh` remains a non-blocking reminder. These changes do not claim that UI/browser tools or other agents have been runtime-validated.
 
 Install (review first; nothing here overwrites settings automatically):
 
@@ -57,4 +87,6 @@ for f in $(find . -type f); do mkdir -p ~/.claude/$(dirname $f); sed -e "s|\${CO
 chmod +x ~/.claude/hooks/harness/*.sh
 ```
 
-Then merge the two `PreToolUse` entries from `~/.claude/settings.hooks.json` into the existing `hooks.PreToolUse` array of `~/.claude/settings.json` (append; keep other hooks), validate with `python3 -m json.tool`, and start Claude Code with `ocx claude`. Existing `~/.claude/CLAUDE.md`, agents, or skills with the same names are overwritten by the loop above; skip those files if you keep your own. Routing, effort pass-through, and in-session hook firing were not verified for this publication; the hook scripts were checked only with sample JSON inputs.
+Then merge the two `PreToolUse` entries from `~/.claude/settings.hooks.json` into the existing `hooks.PreToolUse` array of `~/.claude/settings.json` (append; keep other hooks), validate with `python3 -m json.tool`, and start Claude Code with `ocx claude`. The collector currently has no completed authenticated reviewer run; isolated kernel permissions were observed, but reviewer model/effort and product verdict remain unverified. Normal Claude authentication must already work.
+
+Existing files with the same names are overwritten by the loop above; skip files you maintain yourself. For a selective update, copy only reviewed changed files, including `guard.py` beside both hook entrypoints. Do not replace settings or copy private run records into the repository. Other agents' routing, effort and live hooks remain unverified until separately evidenced.
